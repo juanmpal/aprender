@@ -41,14 +41,14 @@ bysort idschool: egen totclasses = sum(aux_classes)
 keep if totclasses > 1 & totclasses != .
 
 *Class size
-bysort idclass: gen class_size = idstudent[_N]
+bysort idclass: egen class_size = max(idstudent)
 
 *Average score of peers
-bysort idclass: gen peers_score_m = sum(mpuntaje_std)
+bysort idclass: egen peers_score_m = sum(mpuntaje_std)
 replace peers_score_m = (peers_score_m - mpuntaje_std) / (class_size-1)
 gen lpeers_score_m = log(peers_score_m)
 
-bysort idclass: gen peers_score_l = sum(lpuntaje_std)
+bysort idclass: egen peers_score_l = sum(lpuntaje_std)
 replace peers_score_l = (peers_score_l - lpuntaje_std) / (class_size-1)
 gen lpeers_score_l = log(peers_score_l)
 

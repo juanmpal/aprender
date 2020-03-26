@@ -42,7 +42,7 @@ base <- base %>%
  group_by(idclass) %>%
  mutate(idstudent = row_number())
 
-
+#Sorting
 base <- base %>%
   arrange(idschool,idclass,idstudent) %>%
   select(idschool,idclass,idstudent,everything())
@@ -67,5 +67,34 @@ base <- base %>%
   mutate(peers_score_l = sum(lpuntaje_std)) %>%
   mutate(peers_score_l = (peers_score_l - lpuntaje_std)/(class_size - 1))
 
+#Average characteristics of peers
+peer_vars <- c("edu_madre", "edu_padre", "trabaja", "anios_jardin", "repitio", "apoyo", "buena_relacion")
 
+for (var in peer_vars){
+	peer_var <- paste0("peer_",var)
+	base <- base %>%
+	group_by(idclass) %>%
+	mutate(!!sym(peer_var) := sum(!!sym(var), na.rm=TRUE)) %>%
+	mutate(!!sym(peer_var) := (!!sym(peer_var) - !!sym(var))/(class_size-1))
+}
+
+#peer_vars <- list(edu_madre,edu_padre,trabaja,anios_jardin,repitio,apoyo,buena_relacion)  
+# peer_var_generator <- function(var) {
+# 	peer_var <- paste0("peer_",var)
+# 	base <- base %>%
+# 	group_by(idclass) %>%
+# 	mutate(!!sym(peer_var) := sum(!!sym(var))) %>%
+# 	mutate(peer_var := (peer_var - !!sym(var))/(class_size-1))
+# }
+
+# for (i in peer_vars){
+# 	peer_var_generator(i)	
+# }
+
+ # for (var in peer_vars) {
+ # 	base <- base %>%
+ # 	group_by(idclass) %>%
+ # 	assign(paste("peer_",toString(var)), mutate(peer_var = sum(var))) %>%
+ # 	mutate(peer_var = (peer_var - var)/(class_size-1))
+ # }
 
