@@ -8,8 +8,7 @@ library(ggplot2)
 library(openxlsx)
 
 base_56anio_alum_dir_2016 <- read_dta("C:/research/aprender/data/raw/base_6grado_alum_dir_2016.dta")
-#base_56anio_alum_dir_2016 <- read_dta("raw/base_56anio_alum_dir_2016.dta")
-#base_56anio_alum_dir_2017 <- read_dta(here("data","raw","base_56anio_alum_dir_2017.dta"))
+#base_56anio_alum_dir_2016 <- read_dta(here("data","raw","base_6grado_alum_dir_2016.dta"))
 
 
 
@@ -69,32 +68,15 @@ base <- base %>%
 
 #Average characteristics of peers
 peer_vars <- c("edu_madre", "edu_padre", "trabaja", "anios_jardin", "repitio", "apoyo", "buena_relacion")
+#peer_vars <- base %>%
+#	select(edu_madre,edu_padre,trabaja,anios_jardin,repitio,apoyo,buena_relacion)
 
-for (var in peer_vars){
-	peer_var <- paste0("peer_",var)
-	base <- base %>%
-	group_by(idclass) %>%
-	mutate(!!sym(peer_var) := sum(!!sym(var), na.rm=TRUE)) %>%
-	mutate(!!sym(peer_var) := (!!sym(peer_var) - !!sym(var))/(class_size-1))
-}
+grouped_base <- base %>%
+	select(idschool,idclass,idstudent,class_size,!!!peer_vars)
 
-#peer_vars <- list(edu_madre,edu_padre,trabaja,anios_jardin,repitio,apoyo,buena_relacion)  
-# peer_var_generator <- function(var) {
-# 	peer_var <- paste0("peer_",var)
-# 	base <- base %>%
-# 	group_by(idclass) %>%
-# 	mutate(!!sym(peer_var) := sum(!!sym(var))) %>%
-# 	mutate(peer_var := (peer_var - !!sym(var))/(class_size-1))
-# }
-
-# for (i in peer_vars){
-# 	peer_var_generator(i)	
-# }
-
- # for (var in peer_vars) {
- # 	base <- base %>%
- # 	group_by(idclass) %>%
- # 	assign(paste("peer_",toString(var)), mutate(peer_var = sum(var))) %>%
- # 	mutate(peer_var = (peer_var - var)/(class_size-1))
- # }
-
+ for (var in peer_vars){
+ 	peer_var <- paste0("peer_",var)
+ 	grouped_base <- grouped_base %>%
+ 	mutate(!!sym(peer_var) := sum(!!sym(var), na.rm=TRUE)) %>%
+ 	mutate(!!sym(peer_var) := (!!sym(peer_var) - !!sym(var))/(class_size-1))
+ }
