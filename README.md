@@ -1,8 +1,3 @@
----
-output:
-  pdf_document: default
-  html_document: default
----
 # Master thesis
 ## Based on Aprender database
 *Tutor: ML Alzúa*
