@@ -1,15 +1,14 @@
 #This script:
 #Datawrangling
 
-library(here)
 library(tidyverse)
+library(tidyselect)
 library(haven)
-library(ggplot2)
-library(openxlsx)
+library(here)
 
-base_56anio_alum_dir_2016 <- read_dta("C:/research/aprender/data/raw/base_6grado_alum_dir_2016.dta")
-#base_56anio_alum_dir_2016 <- read_dta(here("data","raw","base_6grado_alum_dir_2016.dta"))
+data <- "C:/research/aprender/data/"
 
+base_56anio_alum_dir_2016 <- read_dta(paste0(data,"raw/base_6grado_alum_dir_2016.dta"))
 
 
 #Dummy women
@@ -68,8 +67,6 @@ base <- base %>%
 
 #Average characteristics of peers
 peer_vars <- c("edu_madre", "edu_padre", "trabaja", "anios_jardin", "repitio", "apoyo", "buena_relacion")
-#peer_vars <- base %>%
-#	select(edu_madre,edu_padre,trabaja,anios_jardin,repitio,apoyo,buena_relacion)
 
 grouped_base <- base %>%
 	select(idschool,idclass,idstudent,class_size,!!!peer_vars)
@@ -80,3 +77,12 @@ grouped_base <- base %>%
  	mutate(!!sym(peer_var) := sum(!!sym(var), na.rm=TRUE)) %>%
  	mutate(!!sym(peer_var) := (!!sym(peer_var) - !!sym(var))/(class_size-1))
  }
+
+peer_vars_avg <- c("peer_edu_madre", "peer_edu_padre", "peer_trabaja", "peer_anios_jardin", "peer_repitio",
+					"peer_apoyo", "peer_buena_relacion")
+
+grouped_base <- grouped_base %>%
+	ungroup()
+
+write.csv(grouped_base,paste0(data,"analytical/base_6grado_2016"))
+
