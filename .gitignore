@@ -7,5 +7,5 @@
 *.sublime-workspace
 data/
 references/
-report/
+paper/
 output/
