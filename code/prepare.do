@@ -13,12 +13,12 @@ local data = "C:\research\aprender\data\"
 local base_list = "6grado 56anio"
 
 
-foreach eachbase of local base_list {
+foreach base of local base_list {
 
 
-	use "`data'/raw/base_`eachbase'_alum_dir_2016", clear
+	use "`data'/raw/base_`base'_alum_dir_2016", clear
 
-	if "`eachbase'" != "6grado" {
+	if "`base'" != "6grado" {
 
 		gen repitio = .
 		replace repitio = 0 if repitio_prim == 0 & repitio_sec == 0
@@ -106,7 +106,7 @@ foreach eachbase of local base_list {
 
 
 
-	save "`data'/analytical/base_`eachbase'_2016.dta", replace
+	save "`data'/analytical/base_`base'_2016.dta", replace
 
 
 }
