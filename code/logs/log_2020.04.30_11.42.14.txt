@@ -1,0 +1,505 @@
+---------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/juanc/Google Drive/research/aprender/code/logs/log_2020.04.30_11.42.14.txt
+  log type:  text
+ opened on:  30 Apr 2020, 11:42:14
+
+. 
+. di "Begin date and time: $S_DATE $S_TIME"
+Begin date and time: 30 Apr 2020 11:42:14
+
+. di "Stata version: `c(stata_version)'"
+Stata version: 15
+
+. di "Updated as of: `c(born_date)'"
+Updated as of: 19 Jun 2017
+
+. di "Variant:       `=cond( c(MP),"MP",cond(c(SE),"SE",c(flavor)) )'"
+Variant:       MP
+
+. di "Processors:    `c(processors)'"
+Processors:    2
+
+. di "OS:            `c(os)' `c(osdtl)'"
+OS:            Windows 64-bit
+
+. di "Machine type:  `c(machine_type)'"
+Machine type:  PC (64-bit x86-64)
+
+. 
+. * All required Stata packages are available in the /libraries/stata folder
+. adopath ++ "$aprender/code/libraries/stata"
+  [1]              "C:/Users/juanc/Google Drive/research/aprender/code/libraries/stata"
+  [2]  (BASE)      "C:\Program Files (x86)\Stata15\ado\base/"
+  [3]  (SITE)      "C:\Program Files (x86)\Stata15\ado\site/"
+  [4]              "."
+  [5]  (PERSONAL)  "c:\ado\personal/"
+  [6]  (PLUS)      "c:\ado\plus/"
+  [7]  (OLDPLACE)  "c:\ado/"
+
+. mata: mata mlib index
+.mlib libraries to be searched are now
+    lmatabase;lmataado;lmataerm;lmatafc;lmatagsem;lmatamcmc;lmatamixlog;lmataopt;lmatapath;lmatapostest;lmatapss;lmatasem;lmatasp
+> ;lmatasvy;lmatatab;lxtabond2
+
+. 
+. * R packages can be installed manually (see README) or installed automatically by uncommenting the following line
+. * if "$DisableR"!="1" rscript using "$aprender/code/programs/_install_R_packages.R"
+. 
+. * Stata programs and R code are stored in /programs
+. adopath ++ "$aprender/code/programs"
+  [1]              "C:/Users/juanc/Google Drive/research/aprender/code/programs"
+  [2]              "C:/Users/juanc/Google Drive/research/aprender/code/libraries/stata"
+  [3]  (BASE)      "C:\Program Files (x86)\Stata15\ado\base/"
+  [4]  (SITE)      "C:\Program Files (x86)\Stata15\ado\site/"
+  [5]              "."
+  [6]  (PERSONAL)  "c:\ado\personal/"
+  [7]  (PLUS)      "c:\ado\plus/"
+  [8]  (OLDPLACE)  "c:\ado/"
+
+. 
+. * Stata and R version control
+. version 15
+
+. if "$DisableR"!="1" rscript using "$aprender/code/programs/_confirm_verison.R"
+
+. 
+. * Create directories for output files
+. cap mkdir "$aprender/data/analytical"
+
+. cap mkdir "$aprender/output"
+
+. cap mkdir "$aprender/output/figures"
+
+. cap mkdir "$aprender/output/intermediate"
+
+. cap mkdir "$aprender/output/tables"
+
+. 
+. * Run project analysis
+. do "$aprender/code/prepare.do"
+
+. ******************************
+. * Estimation of peer effects *
+. ******************************
+. 
+. set more off
+
+. clear all
+
+. 
+. cd "C:\Users\juanc\Google Drive\research\aprender"
+C:\Users\juanc\Google Drive\research\aprender
+
+. 
+. local data = "C:\research\aprender\data\"
+
+. 
+. 
+. local base_list = "6grado 56anio"
+
+. 
+. 
+. foreach eachbase of local base_list {
+  2. 
+. 
+.         use "`data'/raw/base_`eachbase'_alum_dir_2016", clear
+  3. 
+.         if "`eachbase'" != "6grado" {
+  4. 
+.                 gen repitio = .
+  5.                 replace repitio = 0 if repitio_prim == 0 & repitio_sec == 0
+  6.                 replace repitio = 1 if repitio_prim == 1 | repitio_sec == 1
+  7. 
+.                 drop repitio_prim repitio_sec
+  8. 
+.         }
+  9. 
+. 
+.         *dummy women
+.         gen     women = 0 if Ap2 == 1
+ 10.         replace women = 1 if Ap2 == 2
+ 11. 
+.         **Women per class
+.         *Reference variables
+.         *CUEANEXO: school id
+.         *seccion: class id
+.         bysort CUEANEXO seccion: egen totwomen = sum(women)
+ 12.         gen ltotwomen = log(totwomen)
+ 13.         keep if women != .
+ 14. 
+. 
+.         *IDs
+.         encode CUEANEXO, gen(idschool)
+ 15.         encode seccion, gen(idclass)
+ 16. 
+.         bysort idclass: gen idstudent = _n
+ 17. 
+.         rename region region2
+ 18.         encode cod_provincia, gen(region)
+ 19. 
+.         order idschool idclass idstudent region
+ 20.         sort  idschool idclass idstudent
+ 21. 
+. 
+.         *Keep schools with more than one class
+.         gen aux_classes = 1 if idstudent == 1
+ 22.         bysort idschool: egen totclasses = sum(aux_classes)
+ 23.         keep if totclasses > 1 & totclasses != .
+ 24. 
+. 
+.         *Ordered class per school
+.         bysort idschool: gen idclass2 = sum(aux_classes)
+ 25. 
+.         *Class size
+.         bysort idclass: egen class_size = max(idstudent)
+ 26. 
+. 
+. 
+.         *Average score of peers
+.         bysort idclass: egen peers_score_m = sum(mpuntaje_std)
+ 27.         replace peers_score_m = (peers_score_m - mpuntaje_std) / (class_size-1)
+ 28.         gen lpeers_score_m = log(peers_score_m)
+ 29. 
+.         bysort idclass: egen peers_score_l = sum(lpuntaje_std)
+ 30.         replace peers_score_l = (peers_score_l - lpuntaje_std) / (class_size-1)
+ 31.         gen lpeers_score_l = log(peers_score_l)
+ 32. 
+. 
+. 
+.         *Average characteristics of peers
+.         local varlist = "women edu_madre edu_padre trabaja anios_jardin repitio apoyo"
+ 33.         local varlist = "`varlist' buena_relacion auh"
+ 34. 
+.         foreach var of local varlist {
+ 35.                 bysort idclass: egen peer_`var' = sum(`var')
+ 36.                 replace peer_`var' = (peer_`var' - `var') / (class_size-1)
+ 37.         }
+ 38. 
+. 
+. 
+.         *Keep varlist of interest
+.         keep idschool idclass idclass2 idstudent region privado urbano nbi  ///
+>                  mpuntaje_std log_mpuntaje lpuntaje_std log_lpuntaje                    ///     
+>                  class_size women edu_madre edu_padre trabaja anios_jardin      ///
+>                  repitio apoyo buena_relacion auh                                               ///
+>                  peers_score_l lpeers_score_l peers_score_m lpeers_score_m peer_*
+ 39. 
+.         order idschool idclass idclass2 idstudent region privado urbano nbi  ///
+>                   mpuntaje_std log_mpuntaje lpuntaje_std log_lpuntaje                    ///    
+>                   class_size women edu_madre edu_padre trabaja anios_jardin      ///
+>                   repitio apoyo buena_relacion auh                                               ///
+>                   peers_score_l lpeers_score_l peers_score_m lpeers_score_m peer_*
+ 40. 
+. 
+. 
+.         save "`data'/analytical/base_`eachbase'_2016.dta", replace
+ 41. 
+. 
+. }
+(346,459 missing values generated)
+(224,155 real changes made)
+(23,755 missing values generated)
+(122,304 observations deleted)
+(405,788 missing values generated)
+(74,006 observations deleted)
+(365,640 real changes made, 25,357 to missing)
+(25,547 missing values generated)
+(365,640 real changes made, 24,064 to missing)
+(24,258 missing values generated)
+(362,031 real changes made, 479 to missing)
+(365,640 real changes made, 77,439 to missing)
+(365,640 real changes made, 105,491 to missing)
+(340,149 real changes made, 46,933 to missing)
+(365,606 real changes made, 22,433 to missing)
+(245,560 real changes made, 16,165 to missing)
+(342,336 real changes made, 18,151 to missing)
+(365,292 real changes made, 16,075 to missing)
+(354,541 real changes made, 185,768 to missing)
+file C:\research\aprender\data\/analytical/base_6grado_2016.dta saved
+(331,852 missing values generated)
+(236,181 real changes made)
+(71,150 real changes made)
+(217,387 missing values generated)
+(145,102 real changes made)
+(16,991 missing values generated)
+(72,285 observations deleted)
+(240,230 missing values generated)
+(58,331 observations deleted)
+(201,236 real changes made, 27,850 to missing)
+(28,119 missing values generated)
+(201,236 real changes made, 40,848 to missing)
+(41,279 missing values generated)
+(194,457 real changes made, 381 to missing)
+(201,236 real changes made, 49,715 to missing)
+(201,236 real changes made, 50,169 to missing)
+(190,711 real changes made, 11,867 to missing)
+(201,193 real changes made, 8,528 to missing)
+(171,317 real changes made, 6,240 to missing)
+(178,222 real changes made, 9,981 to missing)
+(200,969 real changes made, 8,027 to missing)
+(192,433 real changes made, 43,148 to missing)
+file C:\research\aprender\data\/analytical/base_56anio_2016.dta saved
+
+. 
+. 
+end of do-file
+
+. do "$aprender/code/stats.do"
+
+. ******************************
+. * Estimation of peer effects *
+. ******************************
+. 
+. set more off
+
+. clear all
+
+. 
+. cd "C:\Users\juanc\Google Drive\research\aprender"
+C:\Users\juanc\Google Drive\research\aprender
+
+. 
+. local data = "C:\research\aprender\data"
+
+. 
+. use "`data'/analytical/base_6grado_2016.dta", clear
+
+. 
+. 
+. *FE reg
+. * y_i = a + b1 \bar{Y}_{-i} + b2 x_i + b3 \bar{x}_{-i} + e_i
+. areg log_lpuntaje lpeers_score_l peer_* class_size                                      ///
+>                                   women edu_madre edu_padre trabaja anios_jardin        ///
+>                                   repitio apoyo buena_relacion auh                                      ///
+>                                   privado urbano nbi,                                                           ///
+>                                   abs(idschool) vce(cluster idclass)
+note: privado omitted because of collinearity
+note: urbano omitted because of collinearity
+note: nbi omitted because of collinearity
+
+Linear regression, absorbing indicators         Number of obs     =    102,715
+                                                F(  20,  20819)   =     407.15
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3677
+                                                Adj R-squared     =     0.3112
+                                                Root MSE          =     0.1686
+
+                                  (Std. Err. adjusted for 20,820 clusters in idclass)
+-------------------------------------------------------------------------------------
+                    |               Robust
+       log_lpuntaje |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+--------------------+----------------------------------------------------------------
+     lpeers_score_l |   .2292354   .0107903    21.24   0.000     .2080856    .2503853
+         peer_women |  -.0109726   .0048192    -2.28   0.023    -.0204186   -.0015266
+     peer_edu_madre |   .0010245   .0023008     0.45   0.656    -.0034854    .0055343
+     peer_edu_padre |  -.0049031   .0022333    -2.20   0.028    -.0092806   -.0005257
+       peer_trabaja |  -.0018243    .006329    -0.29   0.773    -.0142295     .010581
+  peer_anios_jardin |  -.0116995   .0027001    -4.33   0.000    -.0169918   -.0064072
+       peer_repitio |  -.0245338    .007821    -3.14   0.002    -.0398635   -.0092041
+         peer_apoyo |   .0215171   .0059102     3.64   0.000     .0099326    .0331016
+peer_buena_relacion |  -.0038634   .0057896    -0.67   0.505    -.0152115    .0074848
+           peer_auh |  -.0192973   .0050124    -3.85   0.000     -.029122   -.0094726
+         class_size |   .0001875   .0000513     3.66   0.000      .000087     .000288
+              women |   .0291738   .0011999    24.31   0.000     .0268219    .0315256
+          edu_madre |   .0188687    .000749    25.19   0.000     .0174007    .0203367
+          edu_padre |   .0061497   .0007201     8.54   0.000     .0047383    .0075612
+            trabaja |   -.041297    .001477   -27.96   0.000    -.0441921   -.0384019
+       anios_jardin |  -.0034248   .0008255    -4.15   0.000    -.0050429   -.0018068
+            repitio |   -.067607   .0021434   -31.54   0.000    -.0718082   -.0634058
+              apoyo |   -.067781   .0014706   -46.09   0.000    -.0706635   -.0648985
+     buena_relacion |   .0174509   .0015613    11.18   0.000     .0143905    .0205112
+                auh |  -.0143692   .0013427   -10.70   0.000     -.017001   -.0117373
+            privado |          0  (omitted)
+             urbano |          0  (omitted)
+                nbi |          0  (omitted)
+              _cons |   6.350615   .0129162   491.68   0.000     6.325298    6.375931
+--------------------+----------------------------------------------------------------
+           idschool |   absorbed                                    (8407 categories)
+
+. 
+. areg log_mpuntaje lpeers_score_m peer_* class_size                                      ///
+>                                   women edu_madre edu_padre trabaja anios_jardin        ///
+>                                   repitio apoyo buena_relacion auh                                      ///
+>                                   privado urbano nbi,                                                           ///
+>                                   abs(idschool) vce(cluster idclass)
+note: privado omitted because of collinearity
+note: urbano omitted because of collinearity
+note: nbi omitted because of collinearity
+
+Linear regression, absorbing indicators         Number of obs     =    102,745
+                                                F(  20,  20870)   =     356.35
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3570
+                                                Adj R-squared     =     0.2993
+                                                Root MSE          =     0.1664
+
+                                  (Std. Err. adjusted for 20,871 clusters in idclass)
+-------------------------------------------------------------------------------------
+                    |               Robust
+       log_mpuntaje |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+--------------------+----------------------------------------------------------------
+     lpeers_score_m |   .0908846   .0078656    11.55   0.000     .0754674    .1063017
+         peer_women |   .0007953   .0046525     0.17   0.864    -.0083238    .0099145
+     peer_edu_madre |   .0041598   .0022432     1.85   0.064    -.0002371    .0085566
+     peer_edu_padre |  -.0036783   .0021394    -1.72   0.086    -.0078716    .0005151
+       peer_trabaja |  -.0086884   .0061307    -1.42   0.156     -.020705    .0033282
+  peer_anios_jardin |  -.0079094   .0026003    -3.04   0.002    -.0130062   -.0028125
+       peer_repitio |  -.0104902   .0081396    -1.29   0.197    -.0264445     .005464
+         peer_apoyo |   .0209209   .0056783     3.68   0.000      .009791    .0320508
+peer_buena_relacion |   .0077357   .0056546     1.37   0.171    -.0033478    .0188191
+           peer_auh |  -.0243784   .0049334    -4.94   0.000    -.0340483   -.0147085
+         class_size |   .0001363   .0000321     4.24   0.000     .0000733    .0001992
+              women |  -.0196479   .0011696   -16.80   0.000    -.0219404   -.0173554
+          edu_madre |   .0164048   .0007464    21.98   0.000     .0149419    .0178678
+          edu_padre |   .0058656   .0007163     8.19   0.000     .0044616    .0072696
+            trabaja |  -.0294287   .0014662   -20.07   0.000    -.0323025   -.0265549
+       anios_jardin |  -.0008395    .000826    -1.02   0.309    -.0024585    .0007794
+            repitio |    -.06915   .0021842   -31.66   0.000    -.0734313   -.0648688
+              apoyo |  -.0758083   .0014348   -52.84   0.000    -.0786206   -.0729959
+     buena_relacion |   .0287302   .0015663    18.34   0.000     .0256601    .0318003
+                auh |  -.0103469   .0013367    -7.74   0.000    -.0129669   -.0077269
+            privado |          0  (omitted)
+             urbano |          0  (omitted)
+                nbi |          0  (omitted)
+              _cons |   6.247081   .0109665   569.65   0.000     6.225585    6.268576
+--------------------+----------------------------------------------------------------
+           idschool |   absorbed                                    (8433 categories)
+
+. 
+. 
+. 
+. xtset idschool
+       panel variable:  idschool (unbalanced)
+
+. 
+. xtreg                     mpuntaje_std peers_score_m peer_* class_size          ///
+>                                   women edu_madre edu_padre trabaja anios_jardin        ///
+>                                   repitio apoyo buena_relacion auh                                      ///
+>                                   privado urbano nbi,                                                           ///
+>                                   mle
+
+Fitting constant-only model:
+Iteration 0:   log likelihood =  85305.909
+Iteration 1:   log likelihood =  85358.589
+Iteration 2:   log likelihood =  85359.062
+Iteration 3:   log likelihood =  85359.062
+
+Fitting full model:
+Iteration 0:   log likelihood =  92898.965
+Iteration 1:   log likelihood =  92990.215
+Iteration 2:   log likelihood =  92990.613
+Iteration 3:   log likelihood =  92990.613
+
+Random-effects ML regression                    Number of obs     =    102,777
+Group variable: idschool                        Number of groups  =      8,442
+
+Random effects u_i ~ Gaussian                   Obs per group:
+                                                              min =          1
+                                                              avg =       12.2
+                                                              max =         95
+
+                                                LR chi2(23)       =   15263.10
+Log likelihood  =  92990.613                    Prob > chi2       =     0.0000
+
+-------------------------------------------------------------------------------------
+       mpuntaje_std |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+--------------------+----------------------------------------------------------------
+      peers_score_m |   .3861516   .0062039    62.24   0.000     .3739922    .3983111
+         peer_women |   .0029343   .0022148     1.32   0.185    -.0014067    .0072752
+     peer_edu_madre |   .0023911   .0010455     2.29   0.022     .0003419    .0044402
+     peer_edu_padre |   .0012726   .0010181     1.25   0.211    -.0007227     .003268
+       peer_trabaja |   -.008148   .0028683    -2.84   0.005    -.0137698   -.0025262
+  peer_anios_jardin |   -.006012   .0009795    -6.14   0.000    -.0079317   -.0040923
+       peer_repitio |   .0065562   .0033447     1.96   0.050     7.25e-07    .0131117
+         peer_apoyo |   .0305913   .0025539    11.98   0.000     .0255858    .0355969
+peer_buena_relacion |   -.000916   .0026233    -0.35   0.727    -.0060575    .0042256
+           peer_auh |  -.0211958   .0021639    -9.79   0.000    -.0254371   -.0169545
+         class_size |   .0001478   .0000231     6.40   0.000     .0001025    .0001931
+              women |  -.0118222   .0006252   -18.91   0.000    -.0130476   -.0105968
+          edu_madre |   .0107109   .0003972    26.97   0.000     .0099325    .0114894
+          edu_padre |   .0042548   .0003856    11.03   0.000      .003499    .0050106
+            trabaja |  -.0172944    .000792   -21.84   0.000    -.0188466   -.0157421
+       anios_jardin |   .0004384   .0004269     1.03   0.304    -.0003983    .0012751
+            repitio |  -.0360405   .0011399   -31.62   0.000    -.0382746   -.0338064
+              apoyo |  -.0431064   .0007823   -55.10   0.000    -.0446398   -.0415731
+     buena_relacion |   .0168187   .0008307    20.25   0.000     .0151906    .0184468
+                auh |  -.0075782    .000709   -10.69   0.000    -.0089678   -.0061886
+            privado |    .015867   .0011482    13.82   0.000     .0136167    .0181174
+             urbano |    -.00682   .0021993    -3.10   0.002    -.0111306   -.0025094
+                nbi |  -.0043819   .0009014    -4.86   0.000    -.0061486   -.0026153
+              _cons |   .3518481   .0053335    65.97   0.000     .3413947    .3623015
+--------------------+----------------------------------------------------------------
+           /sigma_u |    .020579   .0005233                      .0195786    .0216305
+           /sigma_e |   .0962542   .0002225                      .0958192    .0966912
+                rho |   .0437117   .0021754                      .0396128    .0481461
+-------------------------------------------------------------------------------------
+LR test of sigma_u=0: chibar2(01) = 781.85             Prob >= chibar2 = 0.000
+
+. 
+. areg mpuntaje_std peers_score_m peer_* class_size                                       ///
+>                                   women edu_madre edu_padre trabaja anios_jardin        ///
+>                                   repitio apoyo buena_relacion auh                                      ///
+>                                   privado urbano nbi,                                                           ///
+>                                   abs(idschool) vce(cluster idclass)
+note: privado omitted because of collinearity
+note: urbano omitted because of collinearity
+note: nbi omitted because of collinearity
+
+Linear regression, absorbing indicators         Number of obs     =    102,777
+                                                F(  20,  20902)   =     370.86
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3629
+                                                Adj R-squared     =     0.3057
+                                                Root MSE          =     0.0955
+
+                                  (Std. Err. adjusted for 20,903 clusters in idclass)
+-------------------------------------------------------------------------------------
+                    |               Robust
+       mpuntaje_std |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+--------------------+----------------------------------------------------------------
+      peers_score_m |   .1182955   .0094767    12.48   0.000     .0997205    .1368706
+         peer_women |   .0003483   .0026136     0.13   0.894    -.0047745    .0054711
+     peer_edu_madre |   .0020988   .0012638     1.66   0.097    -.0003783     .004576
+     peer_edu_padre |  -.0020918   .0012021    -1.74   0.082    -.0044481    .0002645
+       peer_trabaja |  -.0046653   .0034308    -1.36   0.174    -.0113899    .0020593
+  peer_anios_jardin |  -.0043111   .0014461    -2.98   0.003    -.0071455   -.0014767
+       peer_repitio |  -.0044208   .0044401    -1.00   0.319    -.0131237    .0042821
+         peer_apoyo |   .0124563   .0031973     3.90   0.000     .0061893    .0187232
+peer_buena_relacion |   .0040961   .0031201     1.31   0.189    -.0020197    .0102118
+           peer_auh |  -.0139122   .0027299    -5.10   0.000     -.019263   -.0085614
+         class_size |   .0000745   .0000181     4.11   0.000     .0000389      .00011
+              women |  -.0116293   .0006735   -17.27   0.000    -.0129494   -.0103092
+          edu_madre |   .0097963   .0004233    23.14   0.000     .0089666     .010626
+          edu_padre |   .0036501   .0004082     8.94   0.000       .00285    .0044503
+            trabaja |  -.0166434   .0008245   -20.19   0.000    -.0182595   -.0150273
+       anios_jardin |  -.0000335   .0004619    -0.07   0.942    -.0009388    .0008719
+            repitio |  -.0366839   .0011606   -31.61   0.000    -.0389587    -.034409
+              apoyo |  -.0437698   .0008042   -54.42   0.000    -.0453462   -.0421934
+     buena_relacion |   .0160255   .0008727    18.36   0.000      .014315     .017736
+                auh |  -.0064221   .0007619    -8.43   0.000    -.0079154   -.0049287
+            privado |          0  (omitted)
+             urbano |          0  (omitted)
+                nbi |          0  (omitted)
+              _cons |   .4990795   .0065277    76.46   0.000     .4862847    .5118743
+--------------------+----------------------------------------------------------------
+           idschool |   absorbed                                    (8442 categories)
+
+. 
+end of do-file
+
+. *do "$aprender/code/1_process_raw_data.do"
+. *do "$aprender/code/2_clean_data.do"
+. *do "$aprender/code/3_regressions.do"
+. *do "$aprender/code/4_make_tables_figures.do"
+. 
+. * End log
+. di "End date and time: $S_DATE $S_TIME"
+End date and time: 30 Apr 2020 11:43:08
+
+. log close
+      name:  <unnamed>
+       log:  C:/Users/juanc/Google Drive/research/aprender/code/logs/log_2020.04.30_11.42.14.txt
+  log type:  text
+ closed on:  30 Apr 2020, 11:43:08
+---------------------------------------------------------------------------------------------------------------------------------
