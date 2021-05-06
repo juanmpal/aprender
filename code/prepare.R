@@ -84,6 +84,8 @@ for (eachbase in base_list) {
     mutate(class_size = max(idstudent))
   
   #Average score of peers
+  #First drop missings
+  base <- base[!is.na(base$mpuntaje_std) & !is.na(base$lpuntaje_std),]  
   base <- base %>%
     group_by(idclass) %>%
     mutate(peers_score_m = sum(mpuntaje_std)) %>%
@@ -97,14 +99,17 @@ for (eachbase in base_list) {
   # Average characteristics of peers #
   #----------------------------------#
   
-  peer_vars <- c("women","edu_madre", "edu_padre", "trabaja", "anios_jardin",
-           "repitio", "apoyo", "buena_relacion","auh")
+  peer_vars <- c("women","edu_madre", "trabaja", "anios_jardin",
+           "repitio", "apoyo", "buena_relacion")
   
   #Keep variables of interest
   base <- base %>%
     select(idschool,idclass,idstudent,region,privado,urbano,nbi,class_size,
          mpuntaje_std, lpuntaje_std, peers_score_m,peers_score_l,
          !!!peer_vars)
+
+  #Drop missings
+  base <- na.omit(base)  
   
   
   #Function that generates peer average of var (not including own value)

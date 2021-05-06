@@ -70,10 +70,12 @@ foreach base of local base_list {
 
 
 	*Average score of peers
+	drop if mpuntaje_std == .
 	bysort idclass: egen peers_score_m = sum(mpuntaje_std)
 	replace peers_score_m = (peers_score_m - mpuntaje_std) / (class_size-1)
 	gen lpeers_score_m = log(peers_score_m)
 
+	drop if lpuntaje_std == .
 	bysort idclass: egen peers_score_l = sum(lpuntaje_std)
 	replace peers_score_l = (peers_score_l - lpuntaje_std) / (class_size-1)
 	gen lpeers_score_l = log(peers_score_l)
@@ -81,10 +83,11 @@ foreach base of local base_list {
 
 
 	*Average characteristics of peers
-	local varlist = "women edu_madre edu_padre trabaja anios_jardin repitio apoyo"
-	local varlist = "`varlist' buena_relacion auh"
+	local varlist = "women edu_madre trabaja anios_jardin repitio apoyo"
+	local varlist = "`varlist' buena_relacion"
 
 	foreach var of local varlist {
+		drop if `var' == .
 		bysort idclass: egen peer_`var' = sum(`var')
 		replace peer_`var' = (peer_`var' - `var') / (class_size-1)
 	}
@@ -94,14 +97,14 @@ foreach base of local base_list {
 	*Keep varlist of interest
 	keep idschool idclass idclass2 idstudent region privado urbano nbi  ///
 		 mpuntaje_std log_mpuntaje lpuntaje_std log_lpuntaje   			///	
-	 	 class_size women edu_madre edu_padre trabaja anios_jardin  	///
-	 	 repitio apoyo buena_relacion auh            					///
+	 	 class_size women edu_madre trabaja anios_jardin  				///
+	 	 repitio apoyo buena_relacion	            					///
 	 	 peers_score_l lpeers_score_l peers_score_m lpeers_score_m peer_*
 
 	order idschool idclass idclass2 idstudent region privado urbano nbi  ///
 		  mpuntaje_std log_mpuntaje lpuntaje_std log_lpuntaje   		 ///	
-	 	  class_size women edu_madre edu_padre trabaja anios_jardin  	 ///
-	 	  repitio apoyo buena_relacion auh            					 ///
+	 	  class_size women edu_madre trabaja anios_jardin  	 			 ///
+	 	  repitio apoyo buena_relacion 	            					 ///
 	 	  peers_score_l lpeers_score_l peers_score_m lpeers_score_m peer_*
 
 
